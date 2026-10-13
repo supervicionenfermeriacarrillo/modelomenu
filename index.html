@@ -95,8 +95,8 @@
     </div>
 
     <script>
-        // API URL correcta y completa de Apps Script
-    const API_URL = 'https://script.google.com/macros/s/AKfycbwlPx9sqvz2H8pd0YIUWNI1pBJwqCcakA6MCknyLT8WOBn29VoiEJ9-GGEZ8xsMr4gc/exec';
+        // API URL exacta de tu Apps Script
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwlPx9sqvz2H8pd0YIUWNI1pBJwqCcakA6MCknyLT8WOBn29VoiEJ9-GGEZ8xsMr4gc/exec';
 
         let datosGlobales = {};
         let carrito = [];
@@ -106,10 +106,10 @@
                 let respuesta = await fetch(API_URL);
                 datosGlobales = await respuesta.json();
 
-                // Cargar Nombre del Local y Ajustes
+                // Cargar Nombre del Local y Ajustes (Apuntando a NOMBRE_LOCAL e IMAGEN_PORTADA)
                 if(datosGlobales.ajustes) {
-                    let nombreLocal = datosGlobales.ajustes['NOMBRE_LOC'] || datosGlobales.ajustes['nombre_loc'];
-                    let imagenPort = datosGlobales.ajustes['IMAGEN_PORT'] || datosGlobales.ajustes['imagen_port'];
+                    let nombreLocal = datosGlobales.ajustes['NOMBRE_LOCAL'] || datosGlobales.ajustes['NOMBRE_LOC'];
+                    let imagenPort = datosGlobales.ajustes['IMAGEN_PORTADA'] || datosGlobales.ajustes['IMAGEN_PORT'];
 
                     if(nombreLocal) {
                         document.getElementById('nombre-local').innerText = nombreLocal;
