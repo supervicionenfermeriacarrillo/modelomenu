@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Digital</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuración para PWA (Instalable como App) -->
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="data:application/manifest+json,{
+        'name': 'Menú Digital',
+        'short_name': 'Menú',
+        'start_url': '.',
+        'display': 'standalone',
+        'background_color': '#ffffff',
+        'theme_color': '#0f172a'
+    }">
+    <style>
+        /* Ocultar barra de desplazamiento en el carrusel pero permitir scroll táctil */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans pb-24">
+
+    <!-- Encabezado del Local -->
+    <header id="header-local" class="bg-slate-900 text-white py-6 px-4 text-center shadow-md">
+        <h1 id="nombre-local" class="text-2xl font-bold">Cargando menú...</h1>
+        <p class="text-xs text-gray-300 mt-1">Haz tu pedido fácil y rápido</p>
+    </header>
+
+    <!-- Carrusel Superior de Categorías -->
+    <nav class="sticky top-0 bg-white shadow-sm z-10 py-3 px-4 border-b border-gray-100">
+        <div id="categorias-carrusel" class="flex space-x-3 overflow-x-auto no-scrollbar max-w-4xl mx-auto">
+            <!-- Las categorías se cargarán aquí -->
+        </div>
+    </nav>
+
+    <!-- Contenido Principal: Productos -->
+    <main class="max-w-4xl mx-auto p-4 mt-2">
+        <div id="menu-container" class="space-y-8">
+            <p class="text-center text-gray-500 py-8">Cargando productos...</p>
+        </div>
+    </main>
+
+    <!-- Botón flotante del Carrito -->
+    <div id="carrito-btn" onclick="toggleCarrito()" class="fixed bottom-5 right-5 bg-green-600 text-white p-4 rounded-full shadow-lg cursor-pointer flex items-center justify-center hover:bg-green-700 transition z-20">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+        <span id="carrito-contador" class="absolute -top-1 -right-1 bg-red-500 text-xs text-white rounded-full h-5 w-5 flex items-center justify-center font-bold">0</span>
+    </div>
+
+    <!-- Modal del Carrito y Formulario de Pedido -->
+    <div id="modal-carrito" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+        <div class="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h2 class="text-xl font-bold text-slate-900">Tu Pedido</h2>
+                <button onclick="toggleCarrito()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            
+            <div id="lista-carrito" class="divide-y divide-gray-100 max-h-48 overflow-y-auto mb-4">
+                <!-- Items del carrito -->
+            </div>
+
+            <div class="flex justify-between font-bold text-lg border-t pt-3 mb-4">
+                <span>Total:</span>
+                <span id="carrito-total" class="text-green-600">$0.00</span>
+            </div>
+
+            <!-- Formulario de Datos del Cliente -->
+            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100 mb-4">
+                <h3 class="font-semibold text-sm text-gray-700">Datos para el envío</h3>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
+                    <input type="text" id="input-nombre" placeholder="Tu nombre y apellido" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Teléfono / Celular *</label>
+                    <input type="tel" id="input-telefono" placeholder="Ej: 3764561004" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none">
+                </div>
+            </div>
+
+            <button onclick="enviarPedidoWhatsApp()" class="w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition shadow-md flex items-center justify-center space-x-2">
+                <span>Enviar Pedido por WhatsApp</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal para ver Imagen Grande (Zoom) -->
+    <div id="modal-imagen" onclick="cerrarImagen()" class="fixed inset-0 bg-black bg-opacity-80 hidden flex items-center justify-center p-4 z-50 cursor-pointer">
+        <img id="imagen-ampliada" src="" class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain">
+    </div>
+
+    <script>
+        // API DE APPS SCRIPT INTEGRADA
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxWCT9cOZW054mFqLFANIrQZAAtayU84KT7Sz3DrCg3lQZzJOVO_JYW-1ltVNqLKLy9/exec';
+
+        let datosGlobales = {};
+        let carrito = [];
+
+        async function cargarMenu() {
+            try {
+                let respuesta = await fetch(API_URL);
+                datosGlobales = await respuesta.json();
+
+                // Cargar Nombre del Local
+                if(datosGlobales.ajustes && datosGlobales.ajustes.NOMBRE_LOC) {
+                    document.getElementById('nombre-local').innerText = datosGlobales.ajustes.NOMBRE_LOC;
+                    document.title = datosGlobales.ajustes.NOMBRE_LOC + " - Menú Digital";
+                }
+
+                renderizarCarruselCategorias();
+                renderizarProductos();
+
+            } catch (error) {
+                console.error("Error al cargar el menú:", error);
+                document.getElementById('menu-container').innerHTML = `<p class="text-center text-red-500">Error al conectar con la base de datos.</p>`;
+            }
+        }
+
+        function renderizarCarruselCategorias() {
+            let carrusel = document.getElementById('categorias-carrusel');
+            carrusel.innerHTML = `<button onclick="filtrarCategoria('todas')" class="px-4 py-1.5 bg-slate-900 text-white text-sm font-medium rounded-full whitespace-nowrap transition">Todas</button>`;
+
+            datosGlobales.categorias.sort((a, b) => a.orden - b.orden).forEach(cat => {
+                carrusel.innerHTML += `
+                    <button onclick="filtrarCategoria('${cat.id}')" class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-full whitespace-nowrap transition">
+                        ${cat.nombre}
+                    </button>
+                `;
+            });
+        }
+
+        function renderizarProductos(categoriaFiltro = 'todas') {
+            let container = document.getElementById('menu-container');
+            container.innerHTML = '';
+
+            let categoriasAMostrar = categoriaFiltro === 'todas' 
+                ? datosGlobales.categorias.sort((a, b) => a.orden - b.orden)
+                : datosGlobales.categorias.filter(c => c.id == categoriaFiltro);
+
+            categoriasAMostrar.forEach(cat => {
+                let productosCat = datosGlobales.productos.filter(p => p.categoria_id == cat.id);
+                
+                if(productosCat.length > 0) {
+                    let catDiv = document.createElement('div');
+                    catDiv.id = `cat-${cat.id}`;
+                    catDiv.className = "bg-white rounded-xl shadow-sm p-5 border border-gray-100";
+                    
+                    let html = `<h2 class="text-xl font-bold text-slate-800 mb-4 border-b pb-2">${cat.nombre}</h2>`;
+                    html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+
+                    productosCat.forEach(prod => {
+                        let tieneImagen = prod.imagen && prod.imagen.trim() !== '';
+                        html += `
+                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                ${tieneImagen ? `<img src="${prod.imagen}" onclick="verImagen('${prod.imagen}')" class="w-20 h-20 object-cover rounded-lg mr-3 cursor-pointer hover:opacity-90 transition flex-shrink-0" title="Ver imagen ampliada">` : ''}
+                                <div class="flex-grow">
+                                    <h3 class="font-semibold text-base text-slate-900">${prod.nombre}</h3>
+                                    <p class="text-xs text-gray-600 mt-0.5 line-clamp-2">${prod.descripcion || ''}</p>
+                                    <span class="font-bold text-green-600 text-base mt-1 block">$${Number(prod.precio).toFixed(2)}</span>
+                                </div>
+                                <button onclick="agregarAlCarrito('${prod.id}', '${prod.nombre.replace(/'/g, "")}', ${prod.precio})" class="ml-3 bg-slate-900 text-white p-2.5 rounded-xl hover:bg-slate-800 transition flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </button>
+                            </div>
+                        `;
+                    });
+
+                    html += `</div>`;
+                    catDiv.innerHTML = html;
+                    container.appendChild(catDiv);
+                }
+            });
+        }
+
+        function filtrarCategoria(catId) {
+            if(catId === 'todas') {
+                renderizarProductos('todas');
+            } else {
+                let elemento = document.getElementById(`cat-${catId}`);
+                if(elemento) {
+                    elemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        }
+
+        // Funcionalidad de Zoom de Imagen
+        function verImagen(url) {
+            document.getElementById('imagen-ampliada').src = url;
+            document.getElementById('modal-imagen').classList.remove('hidden');
+        }
+
+        function cerrarImagen() {
+            document.getElementById('modal-imagen').classList.add('hidden');
+        }
+
+        // Carrito de Compras
+        function agregarAlCarrito(id, nombre, precio) {
+            let item = carrito.find(i => i.id === id);
+            if(item) {
+                item.cantidad++;
+            } else {
+                carrito.push({ id, nombre, precio, cantidad: 1 });
+            }
+            actualizarCarritoUI();
+        }
+
+        function actualizarCarritoUI() {
+            let contador = document.getElementById('carrito-contador');
+            let totalItems = carrito.reduce((sum, item) => sum + item.cantidad, 0);
+            contador.innerText = totalItems;
+
+            let lista = document.getElementById('lista-carrito');
+            lista.innerHTML = '';
+            let total = 0;
+
+            if(carrito.length === 0) {
+                lista.innerHTML = `<p class="text-center text-gray-400 py-4 text-sm">Tu carrito está vacío</p>`;
+            } else {
+                carrito.forEach((item, index) => {
+                    total += item.precio * item.cantidad;
+                    lista.innerHTML += `
+                        <div class="flex justify-between items-center py-2 text-sm">
+                            <div>
+                                <span class="font-semibold text-slate-800">${item.nombre}</span>
+                                <p class="text-xs text-gray-500">$${item.precio} x ${item.cantidad}</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-slate-900">$${(item.precio * item.cantidad).toFixed(2)}</span>
+                                <button onclick="cambiarCantidad(${index}, -1)" class="text-red-500 font-bold px-1.5 py-0.5 bg-red-50 rounded">-</button>
+                                <button onclick="cambiarCantidad(${index}, 1)" class="text-green-600 font-bold px-1.5 py-0.5 bg-green-50 rounded">+</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('carrito-total').innerText = `$${total.toFixed(2)}`;
+        }
+
+        function cambiarCantidad(index, delta) {
+            carrito[index].cantidad += delta;
+            if(carrito[index].cantidad <= 0) {
+                carrito.splice(index, 1);
+            }
+            actualizarCarritoUI();
+        }
+
+        function toggleCarrito() {
+            let modal = document.getElementById('modal-carrito');
+            modal.classList.toggle('hidden');
+        }
+
+        // Enviar Pedido por WhatsApp configurado para Argentina (+54 9 3764561004)
+        function enviarPedidoWhatsApp() {
+            let nombre = document.getElementById('input-nombre').value.trim();
+            let telefono = document.getElementById('input-telefono').value.trim();
+
+            if(!nombre || !telefono) {
+                alert('Por favor, completa tu Nombre y Teléfono antes de enviar el pedido.');
+                return;
+            }
+
+            if(carrito.length === 0) {
+                alert('Tu carrito está vacío.');
+                return;
+            }
+
+            let mensaje = `Hola, tenés un nuevo pedido:%0A%0A`;
+            mensaje += `👤 *Cliente:* ${nombre}%0A`;
+            mensaje += `📞 *Teléfono:* ${telefono}%0A%0A`;
+            mensaje += `🛒 *Detalle del pedido:*%0A`;
+
+            let total = 0;
+            carrito.forEach(item => {
+                let subtotal = item.precio * item.cantidad;
+                total += subtotal;
+                mensaje += `• ${item.cantidad}x ${item.nombre} ($${subtotal.toFixed(2)})%0A`;
+            });
+
+            mensaje += `%0A💰 *Total a Pagar:* $${total.toFixed(2)}`;
+
+            // Número configurado: Argentina (549) + Prefijo/Área (3764) + Número (561004)
+            let numeroLocal = "5493764561004";
+
+            let urlWhatsApp = `https://wa.me/${numeroLocal}?text=${mensaje}`;
+            window.open(urlWhatsApp, '_blank');
+        }
+
+        cargarMenu();
+    </script>
+</body>
+</html>
