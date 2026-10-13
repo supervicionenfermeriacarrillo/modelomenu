@@ -22,9 +22,8 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans pb-24">
 
-    <!-- Encabezado del Local con soporte para Imagen de Portada -->
+    <!-- Encabezado del Local (Soporte para Imagen de Portada) -->
     <header id="header-local" class="relative bg-slate-900 text-white py-12 px-4 text-center shadow-md bg-cover bg-center">
-        <!-- Capa oscura para que el texto resalte sobre la imagen -->
         <div id="header-overlay" class="absolute inset-0 bg-black bg-opacity-60 hidden"></div>
         <div class="relative z-10 max-w-2xl mx-auto">
             <h1 id="nombre-local" class="text-3xl font-extrabold tracking-tight">Cargando menú...</h1>
@@ -96,6 +95,7 @@
     </div>
 
     <script>
+        // API URL correcta obtenida de tu última implementación
         const API_URL = 'https://script.google.com/macros/s/AKfycbwlPx9sqvz2H8pd0YIUWNI1pBJwqCcakA6MCknyLT8WOBn29VoiEJ9-GGEZ8xsMr4gc/exec';
 
         let datosGlobales = {};
@@ -106,7 +106,7 @@
                 let respuesta = await fetch(API_URL);
                 datosGlobales = await respuesta.json();
 
-                // Cargar Nombre del Local y Ajustes correctamente evaluando en mayúsculas
+                // Cargar Nombre del Local y Ajustes
                 if(datosGlobales.ajustes) {
                     let nombreLocal = datosGlobales.ajustes['NOMBRE_LOC'] || datosGlobales.ajustes['nombre_loc'];
                     let imagenPort = datosGlobales.ajustes['IMAGEN_PORT'] || datosGlobales.ajustes['imagen_port'];
@@ -136,18 +136,22 @@
             let carrusel = document.getElementById('categorias-carrusel');
             carrusel.innerHTML = `<button onclick="filtrarCategoria('todas')" class="px-4 py-1.5 bg-slate-900 text-white text-sm font-medium rounded-full whitespace-nowrap transition">Todas</button>`;
 
-            datosGlobales.categorias.sort((a, b) => a.orden - b.orden).forEach(cat => {
-                carrusel.innerHTML += `
-                    <button onclick="filtrarCategoria('${cat.id}')" class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-full whitespace-nowrap transition">
-                        ${cat.nombre}
-                    </button>
-                `;
-            });
+            if(datosGlobales.categorias) {
+                datosGlobales.categorias.sort((a, b) => a.orden - b.orden).forEach(cat => {
+                    carrusel.innerHTML += `
+                        <button onclick="filtrarCategoria('${cat.id}')" class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-full whitespace-nowrap transition">
+                            ${cat.nombre}
+                        </button>
+                    `;
+                });
+            }
         }
 
         function renderizarProductos(categoriaFiltro = 'todas') {
             let container = document.getElementById('menu-container');
             container.innerHTML = '';
+
+            if(!datosGlobales.categorias || !datosGlobales.productos) return;
 
             let categoriasAMostrar = categoriaFiltro === 'todas' 
                 ? datosGlobales.categorias.sort((a, b) => a.orden - b.orden)
