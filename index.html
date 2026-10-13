@@ -3,21 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Configuración PWA -->
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#0f172a">
     <title>Menú Digital</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#0f172a">
-    <link rel="manifest" href="data:application/manifest+json,{
-        'name': 'Menú Digital',
-        'short_name': 'Menú',
-        'start_url': '.',
-        'display': 'standalone',
-        'background_color': '#ffffff',
-        'theme_color': '#0f172a'
-    }">
+    <!-- Configuración PWA -->
+    <link rel="manifest" href="./manifest.json">
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -25,7 +16,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans pb-24">
 
-    <!-- Encabezado del Local (Soporte para Imagen de Portada) -->
+    <!-- Encabezado del Local -->
     <header id="header-local" class="relative bg-slate-900 text-white py-12 px-4 text-center shadow-md bg-cover bg-center">
         <div id="header-overlay" class="absolute inset-0 bg-black bg-opacity-60 hidden"></div>
         <div class="relative z-10 max-w-2xl mx-auto">
@@ -98,8 +89,8 @@
     </div>
 
     <script>
-        // API URL exacta de tu Apps Script
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwlPx9sqvz2H8pd0YIUWNI1pBJwqCcakA6MCknyLT8WOBn29VoiEJ9-GGEZ8xsMr4gc/exec';
+        // Nueva API URL de Apps Script (Versión 4)
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzKCxvTQy89svdkViqW86qt7SdZ-7mkWRsCCNhTeSbmgAOb8gIzGn_3oEh56fuc0L0/exec';
 
         let datosGlobales = {};
         let carrito = [];
@@ -109,7 +100,6 @@
                 let respuesta = await fetch(API_URL);
                 datosGlobales = await respuesta.json();
 
-                // Cargar Nombre del Local y Ajustes (Apuntando a NOMBRE_LOCAL e IMAGEN_PORTADA)
                 if(datosGlobales.ajustes) {
                     let nombreLocal = datosGlobales.ajustes['NOMBRE_LOCAL'] || datosGlobales.ajustes['NOMBRE_LOC'];
                     let imagenPort = datosGlobales.ajustes['IMAGEN_PORTADA'] || datosGlobales.ajustes['IMAGEN_PORT'];
@@ -181,10 +171,11 @@
                                     <p class="text-xs text-gray-600 mt-0.5 line-clamp-2">${prod.descripcion || ''}</p>
                                     <span class="font-bold text-green-600 text-base mt-1 block">$${Number(prod.precio).toFixed(2)}</span>
                                 </div>
-                                <button onclick="agregarAlCarrito('${prod.id}', '${prod.nombre.replace(/'/g, "")}', ${prod.precio})" class="ml-3 bg-slate-900 text-white p-2.5 rounded-xl hover:bg-slate-800 transition flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <button onclick="agregarAlCarrito('${prod.id}', '${prod.nombre.replace(/'/g, "")}', ${prod.precio})" class="ml-3 bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-slate-800 transition flex items-center space-x-1.5 shadow-sm flex-shrink-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                     </svg>
+                                    <span>Agregar</span>
                                 </button>
                             </div>
                         `;
@@ -273,7 +264,7 @@
             modal.classList.toggle('hidden');
         }
 
-        function enviarPedidoWhatsApp() {
+        async function enviarPedidoWhatsApp() {
             let nombre = document.getElementById('input-nombre').value.trim();
             let telefono = document.getElementById('input-telefono').value.trim();
 
@@ -285,6 +276,18 @@
             if(carrito.length === 0) {
                 alert('Tu carrito está vacío.');
                 return;
+            }
+
+            // Guardar cliente automáticamente en Google Sheets (solapa Clientes)
+            try {
+                fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre: nombre, telefono: telefono })
+                });
+            } catch (err) {
+                console.error("No se pudo guardar el contacto automáticamente", err);
             }
 
             let mensaje = `Hola, tenés un nuevo pedido:%0A%0A`;
