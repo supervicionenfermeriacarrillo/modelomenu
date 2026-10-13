@@ -6,7 +6,6 @@
     <title>Menú Digital</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Configuración para PWA (Instalable como App) -->
     <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="data:application/manifest+json,{
         'name': 'Menú Digital',
@@ -17,17 +16,20 @@
         'theme_color': '#0f172a'
     }">
     <style>
-        /* Ocultar barra de desplazamiento en el carrusel pero permitir scroll táctil */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans pb-24">
 
-    <!-- Encabezado del Local -->
-    <header id="header-local" class="bg-slate-900 text-white py-6 px-4 text-center shadow-md">
-        <h1 id="nombre-local" class="text-2xl font-bold">Cargando menú...</h1>
-        <p class="text-xs text-gray-300 mt-1">Haz tu pedido fácil y rápido</p>
+    <!-- Encabezado del Local con soporte para Imagen de Portada -->
+    <header id="header-local" class="relative bg-slate-900 text-white py-12 px-4 text-center shadow-md bg-cover bg-center">
+        <!-- Capa oscura para que el texto resalte sobre la imagen -->
+        <div id="header-overlay" class="absolute inset-0 bg-black bg-opacity-60 hidden"></div>
+        <div class="relative z-10 max-w-2xl mx-auto">
+            <h1 id="nombre-local" class="text-3xl font-extrabold tracking-tight">Cargando menú...</h1>
+            <p class="text-sm text-gray-200 mt-1">Haz tu pedido fácil y rápido</p>
+        </div>
     </header>
 
     <!-- Carrusel Superior de Categorías -->
@@ -94,7 +96,6 @@
     </div>
 
     <script>
-        // API DE APPS SCRIPT INTEGRADA
         const API_URL = 'https://script.google.com/macros/s/AKfycbxWCT9cOZW054mFqLFANIrQZAAtayU84KT7Sz3DrCg3lQZzJOVO_JYW-1ltVNqLKLy9/exec';
 
         let datosGlobales = {};
@@ -105,10 +106,21 @@
                 let respuesta = await fetch(API_URL);
                 datosGlobales = await respuesta.json();
 
-                // Cargar Nombre del Local
-                if(datosGlobales.ajustes && datosGlobales.ajustes.NOMBRE_LOC) {
-                    document.getElementById('nombre-local').innerText = datosGlobales.ajustes.NOMBRE_LOC;
-                    document.title = datosGlobales.ajustes.NOMBRE_LOC + " - Menú Digital";
+                // Cargar Nombre del Local y Ajustes correctamente evaluando en mayúsculas
+                if(datosGlobales.ajustes) {
+                    let nombreLocal = datosGlobales.ajustes['NOMBRE_LOC'] || datosGlobales.ajustes['nombre_loc'];
+                    let imagenPort = datosGlobales.ajustes['IMAGEN_PORT'] || datosGlobales.ajustes['imagen_port'];
+
+                    if(nombreLocal) {
+                        document.getElementById('nombre-local').innerText = nombreLocal;
+                        document.title = nombreLocal + " - Menú Digital";
+                    }
+
+                    if(imagenPort && imagenPort.trim() !== '') {
+                        let header = document.getElementById('header-local');
+                        header.style.backgroundImage = `url('${imagenPort}')`;
+                        document.getElementById('header-overlay').classList.remove('hidden');
+                    }
                 }
 
                 renderizarCarruselCategorias();
@@ -189,7 +201,6 @@
             }
         }
 
-        // Funcionalidad de Zoom de Imagen
         function verImagen(url) {
             document.getElementById('imagen-ampliada').src = url;
             document.getElementById('modal-imagen').classList.remove('hidden');
@@ -199,7 +210,6 @@
             document.getElementById('modal-imagen').classList.add('hidden');
         }
 
-        // Carrito de Compras
         function agregarAlCarrito(id, nombre, precio) {
             let item = carrito.find(i => i.id === id);
             if(item) {
@@ -256,7 +266,6 @@
             modal.classList.toggle('hidden');
         }
 
-        // Enviar Pedido por WhatsApp configurado para Argentina (+54 9 3764561004)
         function enviarPedidoWhatsApp() {
             let nombre = document.getElementById('input-nombre').value.trim();
             let telefono = document.getElementById('input-telefono').value.trim();
@@ -285,9 +294,7 @@
 
             mensaje += `%0A💰 *Total a Pagar:* $${total.toFixed(2)}`;
 
-            // Número configurado: Argentina (549) + Prefijo/Área (3764) + Número (561004)
             let numeroLocal = "5493764561004";
-
             let urlWhatsApp = `https://wa.me/${numeroLocal}?text=${mensaje}`;
             window.open(urlWhatsApp, '_blank');
         }
