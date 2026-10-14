@@ -26,10 +26,15 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans pb-24">
 
-    <!-- Encabezado del Local -->
-    <header id="header-local" class="bg-slate-900 text-white py-6 px-4 text-center shadow-md">
-        <h1 id="nombre-local" class="text-2xl font-bold">Cargando menú...</h1>
-        <p class="text-xs text-gray-300 mt-1">Haz tu pedido fácil y rápido</p>
+    <!-- Encabezado del Local con Portada Dinámica -->
+    <header id="header-local" class="bg-slate-900 text-white relative shadow-md overflow-hidden">
+        <div id="contenedor-portada" class="w-full h-40 bg-slate-800 hidden">
+            <img id="img-portada" src="" alt="Portada" class="w-full h-full object-cover">
+        </div>
+        <div class="py-6 px-4 text-center">
+            <h1 id="nombre-local" class="text-2xl font-bold">Cargando menú...</h1>
+            <p class="text-xs text-gray-300 mt-1">Haz tu pedido fácil y rápido</p>
+        </div>
     </header>
 
     <!-- Carrusel Superior de Categorías -->
@@ -131,10 +136,16 @@
                     });
                 }
 
-                // Cargar Nombre del Local dinámicamente
+                // Cargar Nombre del Local
                 const nombreNegocio = datosGlobales.ajustes.nombre_negocio || "Mi Local Digital";
                 document.getElementById('nombre-local').innerText = nombreNegocio;
                 document.title = nombreNegocio + " - Menú Digital";
+
+                // Mostrar Imagen de Portada si existe en Supabase
+                if (datosGlobales.ajustes.imagen_portada) {
+                    document.getElementById('img-portada').src = datosGlobales.ajustes.imagen_portada;
+                    document.getElementById('contenedor-portada').classList.remove('hidden');
+                }
 
                 renderizarCarruselCategorias();
                 renderizarProductos();
@@ -299,7 +310,7 @@
             try {
                 await supabaseClient.from('clientes').insert([{ nombre, telefono }]);
             } catch (e) {
-                console.log("No se pudo registrar el cliente, pero el pedido se enviará igual.");
+                console.log("Cliente no registrado en BD, pero se envía pedido igual.");
             }
 
             let mensaje = `Hola, tenés un nuevo pedido:%0A%0A`;
@@ -316,14 +327,4 @@
 
             mensaje += `%0A💰 *Total a Pagar:* $${total.toFixed(2)}`;
 
-            let numeroLocal = datosGlobales.ajustes.whatsapp_contacto || "5493764561004";
-
-            let urlWhatsApp = `https://wa.me/${numeroLocal}?text=${mensaje}`;
-            window.open(urlWhatsApp, '_blank');
-        }
-
-        // Iniciar carga al abrir la página
-        cargarMenu();
-    </script>
-</body>
-</html>
+            let numeroLocal = datos
