@@ -292,8 +292,8 @@
             modal.classList.toggle('hidden');
         }
 
-        // Enviar Pedido por WhatsApp
-        function enviarPedidoWhatsApp() {
+        // Enviar Pedido por WhatsApp y Guardar en Supabase
+        async function enviarPedidoWhatsApp() {
             let nombre = document.getElementById('input-nombre').value.trim();
             let telefono = document.getElementById('input-telefono').value.trim();
 
@@ -305,6 +305,19 @@
             if(carrito.length === 0) {
                 alert('Tu carrito está vacío.');
                 return;
+            }
+
+            try {
+                // Generar hora local exacta de Argentina como texto
+                let fechaTexto = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
+
+                await supabaseClient.from('clientes').insert([{ 
+                    nombre: nombre, 
+                    telefono: telefono, 
+                    fecha: fechaTexto 
+                }]);
+            } catch (e) {
+                console.log("Error al registrar el cliente:", e);
             }
 
             let mensaje = `Hola, tenés un nuevo pedido:%0A%0A`;
