@@ -308,16 +308,16 @@
             }
 
             try {
-                // Generar la fecha exacta con zona horaria de Argentina
-                let fechaArgentina = new Date().toLocaleString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).replace(",", "");
+                let fechaLocal = new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" });
+                let fechaParaBD = new Date(fechaLocal).toISOString();
 
                 await supabaseClient.from('clientes').insert([{ 
                     nombre: nombre, 
                     telefono: telefono, 
-                    fecha: fechaArgentina 
+                    fecha: fechaParaBD 
                 }]);
             } catch (e) {
-                console.log("No se pudo registrar el cliente, pero el pedido se enviará igual.");
+                console.log("No se pudo registrar el cliente, pero el pedido se enviará igual:", e);
             }
 
             let mensaje = `Hola, tenés un nuevo pedido:%0A%0A`;
