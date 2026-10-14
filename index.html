@@ -308,13 +308,13 @@
             }
 
             try {
-                let fechaLocal = new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" });
-                let fechaParaBD = new Date(fechaLocal).toISOString();
+                // Genera la fecha exacta local como texto plano compatible
+                let fechaTexto = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
 
                 await supabaseClient.from('clientes').insert([{ 
                     nombre: nombre, 
                     telefono: telefono, 
-                    fecha: fechaParaBD 
+                    fecha: fechaTexto 
                 }]);
             } catch (e) {
                 console.log("No se pudo registrar el cliente, pero el pedido se enviará igual:", e);
