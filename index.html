@@ -98,7 +98,6 @@
     <script>
         // CONFIGURACIÓN DE SUPABASE
         const SUPABASE_URL = 'https://wlnwavthfnovmkrcpbwo.supabase.co';
-        // Reemplaza aquí abajo con tu clave "anon public" exacta de Supabase
         const SUPABASE_ANON_KEY = 'sb_publishable_fWfdhVMOO5sE0hYDoMuhDA_w-4O90X6'; 
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -112,30 +111,30 @@
 
         async function cargarMenu() {
             try {
-                // 1. Cargar Categorías desde Supabase
+                // 1. Cargar Categorías
                 let { data: categorias, error: errCat } = await supabaseClient.from('categorias').select('*');
                 if (errCat) throw errCat;
-                datosGlobales.categorias = categorias;
+                datosGlobales.categorias = categorias || [];
 
-                // 2. Cargar Productos desde Supabase
+                // 2. Cargar Productos
                 let { data: productos, error: errProd } = await supabaseClient.from('productos').select('*');
                 if (errProd) throw errProd;
-                datosGlobales.productos = productos;
+                datosGlobales.productos = productos || [];
 
-                // 3. Cargar Ajustes desde Supabase
+                // 3. Cargar Ajustes
                 let { data: ajustes, error: errAdj } = await supabaseClient.from('ajustes_menu').select('*');
                 if (errAdj) throw errAdj;
                 
-                // Convertir la lista de ajustes en un objeto accesible (ej: datosGlobales.ajustes.nombre_negocio)
-                ajustes.forEach(item => {
-                    datosGlobales.ajustes[item.clave] = item.valor;
-                });
-
-                // Cargar Nombre del Local
-                if(datosGlobales.ajustes.nombre_negocio) {
-                    document.getElementById('nombre-local').innerText = datosGlobales.ajustes.nombre_negocio;
-                    document.title = datosGlobales.ajustes.nombre_negocio + " - Menú Digital";
+                if (ajustes) {
+                    ajustes.forEach(item => {
+                        datosGlobales.ajustes[item.clave] = item.valor;
+                    });
                 }
+
+                // Cargar Nombre del Local dinámicamente
+                const nombreNegocio = datosGlobales.ajustes.nombre_negocio || "Mi Local Digital";
+                document.getElementById('nombre-local').innerText = nombreNegocio;
+                document.title = nombreNegocio + " - Menú Digital";
 
                 renderizarCarruselCategorias();
                 renderizarProductos();
@@ -282,7 +281,7 @@
             modal.classList.toggle('hidden');
         }
 
-        // Enviar Pedido por WhatsApp (y opcionalmente registrar el cliente en Supabase)
+        // Enviar Pedido por WhatsApp
         async function enviarPedidoWhatsApp() {
             let nombre = document.getElementById('input-nombre').value.trim();
             let telefono = document.getElementById('input-telefono').value.trim();
@@ -297,11 +296,10 @@
                 return;
             }
 
-            // Opcional: Guardar el cliente/pedido en la tabla 'clientes' de Supabase
             try {
                 await supabaseClient.from('clientes').insert([{ nombre, telefono }]);
             } catch (e) {
-                console.log("No se pudo guardar el cliente en la base de datos, pero se enviará el WhatsApp igual:", e);
+                console.log("No se pudo registrar el cliente, pero el pedido se enviará igual.");
             }
 
             let mensaje = `Hola, tenés un nuevo pedido:%0A%0A`;
@@ -318,7 +316,6 @@
 
             mensaje += `%0A💰 *Total a Pagar:* $${total.toFixed(2)}`;
 
-            // Número configurado en Ajustes o fallback local
             let numeroLocal = datosGlobales.ajustes.whatsapp_contacto || "5493764561004";
 
             let urlWhatsApp = `https://wa.me/${numeroLocal}?text=${mensaje}`;
