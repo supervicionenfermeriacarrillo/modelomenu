@@ -327,4 +327,14 @@
 
             mensaje += `%0A💰 *Total a Pagar:* $${total.toFixed(2)}`;
 
-            let numeroLocal = datos
+            let numeroLocal = datosGlobales.ajustes.whatsapp_contacto || "5493764561004";
+
+            let urlWhatsApp = `https://wa.me/${numeroLocal}?text=${mensaje}`;
+            window.open(urlWhatsApp, '_blank');
+        }
+
+        // Iniciar carga al abrir la página
+        cargarMenu();
+    </script>
+</body>
+</html>
