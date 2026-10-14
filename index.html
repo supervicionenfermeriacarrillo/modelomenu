@@ -6,10 +6,20 @@
     <title>Menú Digital</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería oficial de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Configuración para PWA (Instalable como App) -->
     <meta name="theme-color" content="#0f172a">
-    <!-- Configuración PWA -->
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="data:application/manifest+json,{
+        'name': 'Menú Digital',
+        'short_name': 'Menú',
+        'start_url': '.',
+        'display': 'standalone',
+        'background_color': '#ffffff',
+        'theme_color': '#0f172a'
+    }">
     <style>
+        /* Ocultar barra de desplazamiento en el carrusel pero permitir scroll táctil */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -17,12 +27,9 @@
 <body class="bg-gray-50 text-gray-800 font-sans pb-24">
 
     <!-- Encabezado del Local -->
-    <header id="header-local" class="relative bg-slate-900 text-white py-12 px-4 text-center shadow-md bg-cover bg-center">
-        <div id="header-overlay" class="absolute inset-0 bg-black bg-opacity-60 hidden"></div>
-        <div class="relative z-10 max-w-2xl mx-auto">
-            <h1 id="nombre-local" class="text-3xl font-extrabold tracking-tight">Cargando menú...</h1>
-            <p class="text-sm text-gray-200 mt-1">Haz tu pedido fácil y rápido</p>
-        </div>
+    <header id="header-local" class="bg-slate-900 text-white py-6 px-4 text-center shadow-md">
+        <h1 id="nombre-local" class="text-2xl font-bold">Cargando menú...</h1>
+        <p class="text-xs text-gray-300 mt-1">Haz tu pedido fácil y rápido</p>
     </header>
 
     <!-- Carrusel Superior de Categorías -->
@@ -89,39 +96,53 @@
     </div>
 
     <script>
-        // Nueva API URL de Apps Script (Versión 4)
-        const API_URL = 'https://script.google.com/macros/s/AKfycbysqimBC71WmZ0iwVJJsXla7_3Cgj0NuVaN2DrNmvePWhPqdixcrnFjD89-_l6hVyIT/exec';
+        // CONFIGURACIÓN DE SUPABASE
+        const SUPABASE_URL = 'https://wlnwavthfnovmkrcpbwo.supabase.co';
+        // Reemplaza aquí abajo con tu clave "anon public" exacta de Supabase
+        const SUPABASE_ANON_KEY = 'sb_publishable_fWfdhVMOO5sE0hYDoMuhDA_w-4O90X6'; 
 
-        let datosGlobales = {};
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let datosGlobales = {
+            categorias: [],
+            productos: [],
+            ajustes: {}
+        };
         let carrito = [];
 
         async function cargarMenu() {
             try {
-                let respuesta = await fetch(API_URL);
-                datosGlobales = await respuesta.json();
+                // 1. Cargar Categorías desde Supabase
+                let { data: categorias, error: errCat } = await supabaseClient.from('categorias').select('*');
+                if (errCat) throw errCat;
+                datosGlobales.categorias = categorias;
 
-                if(datosGlobales.ajustes) {
-                    let nombreLocal = datosGlobales.ajustes['NOMBRE_LOCAL'] || datosGlobales.ajustes['NOMBRE_LOC'];
-                    let imagenPort = datosGlobales.ajustes['IMAGEN_PORTADA'] || datosGlobales.ajustes['IMAGEN_PORT'];
+                // 2. Cargar Productos desde Supabase
+                let { data: productos, error: errProd } = await supabaseClient.from('productos').select('*');
+                if (errProd) throw errProd;
+                datosGlobales.productos = productos;
 
-                    if(nombreLocal) {
-                        document.getElementById('nombre-local').innerText = nombreLocal;
-                        document.title = nombreLocal + " - Menú Digital";
-                    }
+                // 3. Cargar Ajustes desde Supabase
+                let { data: ajustes, error: errAdj } = await supabaseClient.from('ajustes_menu').select('*');
+                if (errAdj) throw errAdj;
+                
+                // Convertir la lista de ajustes en un objeto accesible (ej: datosGlobales.ajustes.nombre_negocio)
+                ajustes.forEach(item => {
+                    datosGlobales.ajustes[item.clave] = item.valor;
+                });
 
-                    if(imagenPort && imagenPort.trim() !== '') {
-                        let header = document.getElementById('header-local');
-                        header.style.backgroundImage = `url('${imagenPort}')`;
-                        document.getElementById('header-overlay').classList.remove('hidden');
-                    }
+                // Cargar Nombre del Local
+                if(datosGlobales.ajustes.nombre_negocio) {
+                    document.getElementById('nombre-local').innerText = datosGlobales.ajustes.nombre_negocio;
+                    document.title = datosGlobales.ajustes.nombre_negocio + " - Menú Digital";
                 }
 
                 renderizarCarruselCategorias();
                 renderizarProductos();
 
             } catch (error) {
-                console.error("Error al cargar el menú:", error);
-                document.getElementById('menu-container').innerHTML = `<p class="text-center text-red-500">Error al conectar con la base de datos.</p>`;
+                console.error("Error al conectar con Supabase:", error);
+                document.getElementById('menu-container').innerHTML = `<p class="text-center text-red-500">Error al conectar con la base de datos de Supabase.</p>`;
             }
         }
 
@@ -129,29 +150,25 @@
             let carrusel = document.getElementById('categorias-carrusel');
             carrusel.innerHTML = `<button onclick="filtrarCategoria('todas')" class="px-4 py-1.5 bg-slate-900 text-white text-sm font-medium rounded-full whitespace-nowrap transition">Todas</button>`;
 
-            if(datosGlobales.categorias) {
-                datosGlobales.categorias.sort((a, b) => a.orden - b.orden).forEach(cat => {
-                    carrusel.innerHTML += `
-                        <button onclick="filtrarCategoria('${cat.id}')" class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-full whitespace-nowrap transition">
-                            ${cat.nombre}
-                        </button>
-                    `;
-                });
-            }
+            datosGlobales.categorias.sort((a, b) => a.orden - b.orden).forEach(cat => {
+                carrusel.innerHTML += `
+                    <button onclick="filtrarCategoria('${cat.id}')" class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-full whitespace-nowrap transition">
+                        ${cat.nombre}
+                    </button>
+                `;
+            });
         }
 
         function renderizarProductos(categoriaFiltro = 'todas') {
             let container = document.getElementById('menu-container');
             container.innerHTML = '';
 
-            if(!datosGlobales.categorias || !datosGlobales.productos) return;
-
             let categoriasAMostrar = categoriaFiltro === 'todas' 
                 ? datosGlobales.categorias.sort((a, b) => a.orden - b.orden)
                 : datosGlobales.categorias.filter(c => c.id == categoriaFiltro);
 
             categoriasAMostrar.forEach(cat => {
-                let productosCat = datosGlobales.productos.filter(p => p.categoria_id == cat.id);
+                let productosCat = datosGlobales.productos.filter(p => p.categoria_id == cat.id && p.disponible);
                 
                 if(productosCat.length > 0) {
                     let catDiv = document.createElement('div');
@@ -171,11 +188,10 @@
                                     <p class="text-xs text-gray-600 mt-0.5 line-clamp-2">${prod.descripcion || ''}</p>
                                     <span class="font-bold text-green-600 text-base mt-1 block">$${Number(prod.precio).toFixed(2)}</span>
                                 </div>
-                                <button onclick="agregarAlCarrito('${prod.id}', '${prod.nombre.replace(/'/g, "")}', ${prod.precio})" class="ml-3 bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-slate-800 transition flex items-center space-x-1.5 shadow-sm flex-shrink-0">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <button onclick="agregarAlCarrito('${prod.id}', '${prod.nombre.replace(/'/g, "")}', ${prod.precio})" class="ml-3 bg-slate-900 text-white p-2.5 rounded-xl hover:bg-slate-800 transition flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                     </svg>
-                                    <span>Agregar</span>
                                 </button>
                             </div>
                         `;
@@ -199,6 +215,7 @@
             }
         }
 
+        // Funcionalidad de Zoom de Imagen
         function verImagen(url) {
             document.getElementById('imagen-ampliada').src = url;
             document.getElementById('modal-imagen').classList.remove('hidden');
@@ -208,6 +225,7 @@
             document.getElementById('modal-imagen').classList.add('hidden');
         }
 
+        // Carrito de Compras
         function agregarAlCarrito(id, nombre, precio) {
             let item = carrito.find(i => i.id === id);
             if(item) {
@@ -264,6 +282,7 @@
             modal.classList.toggle('hidden');
         }
 
+        // Enviar Pedido por WhatsApp (y opcionalmente registrar el cliente en Supabase)
         async function enviarPedidoWhatsApp() {
             let nombre = document.getElementById('input-nombre').value.trim();
             let telefono = document.getElementById('input-telefono').value.trim();
@@ -278,16 +297,11 @@
                 return;
             }
 
-            // Guardar cliente automáticamente en Google Sheets (solapa Clientes)
+            // Opcional: Guardar el cliente/pedido en la tabla 'clientes' de Supabase
             try {
-                fetch(API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre: nombre, telefono: telefono })
-                });
-            } catch (err) {
-                console.error("No se pudo guardar el contacto automáticamente", err);
+                await supabaseClient.from('clientes').insert([{ nombre, telefono }]);
+            } catch (e) {
+                console.log("No se pudo guardar el cliente en la base de datos, pero se enviará el WhatsApp igual:", e);
             }
 
             let mensaje = `Hola, tenés un nuevo pedido:%0A%0A`;
@@ -304,11 +318,14 @@
 
             mensaje += `%0A💰 *Total a Pagar:* $${total.toFixed(2)}`;
 
-            let numeroLocal = "5493764561004";
+            // Número configurado en Ajustes o fallback local
+            let numeroLocal = datosGlobales.ajustes.whatsapp_contacto || "5493764561004";
+
             let urlWhatsApp = `https://wa.me/${numeroLocal}?text=${mensaje}`;
             window.open(urlWhatsApp, '_blank');
         }
 
+        // Iniciar carga al abrir la página
         cargarMenu();
     </script>
 </body>
