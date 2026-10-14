@@ -269,7 +269,7 @@
                             <div class="flex items-center space-x-2">
                                 <span class="font-bold text-slate-900">$${(item.precio * item.cantidad).toFixed(2)}</span>
                                 <button onclick="cambiarCantidad(${index}, -1)" class="text-red-500 font-bold px-1.5 py-0.5 bg-red-50 rounded">-</button>
-                                <button onclick="cambiarCantidad(${index}, 1)" class="text-green-600 font-bold px-1.5 py-0.5 bg-green-50 rounded">+</button>
+                                <button onclick="cambiarCantidad(${index}, 1)" class="text-green-600 font-bold px-1.5 py-0.5 bg-red-50 rounded">+</button>
                             </div>
                         </div>
                     `;
@@ -308,9 +308,16 @@
             }
 
             try {
-                await supabaseClient.from('clientes').insert([{ nombre, telefono }]);
+                // Generar la fecha exacta con zona horaria de Argentina
+                let fechaArgentina = new Date().toLocaleString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).replace(",", "");
+
+                await supabaseClient.from('clientes').insert([{ 
+                    nombre: nombre, 
+                    telefono: telefono, 
+                    fecha: fechaArgentina 
+                }]);
             } catch (e) {
-                console.log("Cliente no registrado en BD, pero se envía pedido igual.");
+                console.log("No se pudo registrar el cliente, pero el pedido se enviará igual.");
             }
 
             let mensaje = `Hola, tenés un nuevo pedido:%0A%0A`;
