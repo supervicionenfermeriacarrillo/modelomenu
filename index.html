@@ -293,7 +293,7 @@
         }
 
         // Enviar Pedido por WhatsApp
-        async function enviarPedidoWhatsApp() {
+        function enviarPedidoWhatsApp() {
             let nombre = document.getElementById('input-nombre').value.trim();
             let telefono = document.getElementById('input-telefono').value.trim();
 
@@ -305,19 +305,6 @@
             if(carrito.length === 0) {
                 alert('Tu carrito está vacío.');
                 return;
-            }
-
-            try {
-                // Genera la fecha exacta local como texto plano compatible
-                let fechaTexto = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
-
-                await supabaseClient.from('clientes').insert([{ 
-                    nombre: nombre, 
-                    telefono: telefono, 
-                    fecha: fechaTexto 
-                }]);
-            } catch (e) {
-                console.log("No se pudo registrar el cliente, pero el pedido se enviará igual:", e);
             }
 
             let mensaje = `Hola, tenés un nuevo pedido:%0A%0A`;
