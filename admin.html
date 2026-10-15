@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Nexo Digital</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Estilos para la pantalla de Login */
+        #login-screen { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }
+        #admin-content { display: none; }
+        
+        h1, h2 { color: #333; text-align: center; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; overflow-x: auto; }
+        .tab-btn { padding: 10px 15px; border: none; background: #e0e0e0; cursor: pointer; border-radius: 4px; font-weight: bold; white-space: nowrap; }
+        .tab-btn.active { background: #007bff; color: white; }
+        .section { display: none; }
+        .section.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .form-group { margin-bottom: 15px; background: #fdfdfd; padding: 15px; border: 1px solid #eee; border-radius: 5px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button.save-btn, button.login-btn { background: #28a745; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%; }
+        button.save-btn { width: auto; }
+        button.login-btn:hover, button.save-btn:hover { background: #218838; }
+        .error-msg { color: red; margin-top: 10px; display: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla de Inicio de Sesión -->
+    <div id="login-screen">
+        <h2>Acceso al Panel</h2>
+        <p style="color: #666; font-size: 14px;">Ingresa la contraseña de administración</p>
+        <div class="form-group" style="border: none; padding: 0; background: none;">
+            <input type="password" id="password-input" placeholder="Contraseña" style="margin-bottom: 10px;">
+            <button class="login-btn" onclick="verificarPassword()">Ingresar</button>
+            <div id="error-msg" class="error-msg">Contraseña incorrecta</div>
+        </div>
+    </div>
+
+    <!-- Panel de Control Principal (Oculto hasta poner contraseña) -->
+    <div id="admin-content" class="container">
+        <h1>Panel de Control</h1>
+        
+        <!-- Botones de navegación entre tablas -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="cambiarTab('categorias')">Categorías</button>
+            <button class="tab-btn" onclick="cambiarTab('productos')">Productos</button>
+            <button class="tab-btn" onclick="cambiarTab('ajustes_menu')">Ajustes del Menú</button>
+            <button class="tab-btn" onclick="cambiarTab('clientes')">Clientes</button>
+        </div>
+
+        <!-- Sección Categorías -->
+        <div id="categorias" class="section active">
+            <h2>Gestión de Categorías</h2>
+            <div class="form-group">
+                <label>Nombre de la Categoría:</label>
+                <input type="text" id="cat-nombre" placeholder="Ej: Bebidas">
+                <button class="save-btn" style="margin-top:10px;" onclick="guardarRegistro('categorias')">Agregar Categoría</button>
+            </div>
+            <table id="tabla-categorias">
+                <thead><tr><th>ID</th><th>Nombre</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- Sección Productos -->
+        <div id="productos" class="section">
+            <h2>Gestión de Productos</h2>
+            <div class="form-group">
+                <label>Nombre del Producto:</label>
+                <input type="text" id="prod-nombre" placeholder="Ej: Hamburguesa Completa">
+                <label style="margin-top:10px;">Precio:</label>
+                <input type="number" id="prod-precio" placeholder="Ej: 5000">
+                <button class="save-btn" style="margin-top:10px;" onclick="guardarRegistro('productos')">Agregar Producto</button>
+            </div>
+            <table id="tabla-productos">
+                <thead><tr><th>ID</th><th>Nombre</th><th>Precio</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- Sección Ajustes Menú -->
+        <div id="ajustes_menu" class="section">
+            <h2>Ajustes del Menú</h2>
+            <table id="tabla-ajustes_menu">
+                <thead><tr><th>Parámetro</th><th>Valor</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- Sección Clientes -->
+        <div id="clientes" class="section">
+            <h2>Base de Clientes y Pedidos</h2>
+            <table id="tabla-clientes">
+                <thead><tr><th>ID</th><th>Fecha</th><th>Nombre</th><th>Teléfono</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    // Credenciales conectadas a tu proyecto de Supabase
+    const supabaseUrl = 'https://wlnwavthfnovmkrcpbwo.supabase.co';
+    const supabaseKey = 'sb_publishable_fWfdhVMOO5sE0hYDoMuhDA_w-4O90X6';
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    function verificarPassword() {
+        const pass = document.getElementById('password-input').value;
+        if (pass === 'menu.digital') {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('admin-content').style.display = 'block';
+            cargarDatos('categorias');
+        } else {
+            document.getElementById('error-msg').style.display = 'block';
+        }
+    }
+
+    // Permitir presionar "Enter" para iniciar sesión
+    document.getElementById('password-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') verificarPassword();
+    });
+
+    function cambiarTab(tabId) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+        cargarDatos(tabId);
+    }
+
+    async function cargarDatos(tabla) {
+        const tbody = document.querySelector(`#tabla-${tabla} tbody`);
+        tbody.innerHTML = '<tr><td colspan="4">Cargando datos...</td></tr>';
+
+        const { data, error } = await _supabase.from(tabla).select('*');
+        if (error) {
+            tbody.innerHTML = `<tr><td colspan="4">Error al cargar datos</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = '';
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4">No hay registros cargados.</td></tr>`;
+            return;
+        }
+
+        data.forEach(row => {
+            let tr = document.createElement('tr');
+            if (tabla === 'categorias') {
+                tr.innerHTML = `<td>${row.id || ''}</td><td>${row.nombre || ''}</td>`;
+            } else if (tabla === 'productos') {
+                tr.innerHTML = `<td>${row.id || ''}</td><td>${row.nombre || ''}</td><td>${row.precio || ''}</td>`;
+            } else if (tabla === 'ajustes_menu') {
+                tr.innerHTML = `<td>${row.clave || row.id || ''}</td><td>${row.valor || row.descripcion || ''}</td>`;
+            } else if (tabla === 'clientes') {
+                tr.innerHTML = `<td>${row.id || ''}</td><td>${row.fecha || ''}</td><td>${row.nombre || ''}</td><td>${row.telefono || ''}</td>`;
+            }
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function guardarRegistro(tabla) {
+        if (tabla === 'categorias') {
+            let nombre = document.getElementById('cat-nombre').value;
+            if (!nombre) { alert('Completa el nombre'); return; }
+            const { error } = await _supabase.from('categorias').insert([{ nombre }]);
+            if (!error) { 
+                alert('¡Categoría guardada con éxito!'); 
+                document.getElementById('cat-nombre').value = ''; 
+                cargarDatos('categorias'); 
+            } else {
+                alert('Error al guardar: ' + error.message);
+            }
+        } else if (tabla === 'productos') {
+            let nombre = document.getElementById('prod-nombre').value;
+            let precio = document.getElementById('prod-precio').value;
+            if (!nombre || !precio) { alert('Completa todos los campos'); return; }
+            const { error } = await _supabase.from('productos').insert([{ nombre, precio: Number(precio) }]);
+            if (!error) { 
+                alert('¡Producto guardado con éxito!'); 
+                document.getElementById('prod-nombre').value = ''; 
+                document.getElementById('prod-precio').value = ''; 
+                cargarDatos('productos'); 
+            } else {
+                alert('Error al guardar: ' + error.message);
+            }
+        }
+    }
+</script>
+
+</body>
+</html>
