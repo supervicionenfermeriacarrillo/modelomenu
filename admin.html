@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
         /* Estilos para la pantalla de Login */
         #login-screen { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }
@@ -19,12 +19,12 @@
         .tab-btn.active { background: #007bff; color: white; }
         .section { display: none; }
         .section.active { display: block; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f8f9fa; }
         .form-group { margin-bottom: 15px; background: #fdfdfd; padding: 15px; border: 1px solid #eee; border-radius: 5px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; }
         button.save-btn, button.login-btn { background: #28a745; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%; }
         button.save-btn { width: auto; }
         button.login-btn:hover, button.save-btn:hover { background: #218838; }
@@ -38,13 +38,13 @@
         <h2>Acceso al Panel</h2>
         <p style="color: #666; font-size: 14px;">Ingresa la contraseña de administración</p>
         <div class="form-group" style="border: none; padding: 0; background: none;">
-            <input type="password" id="password-input" placeholder="Contraseña" style="margin-bottom: 10px;">
+            <input type="password" id="password-input" placeholder="Contraseña">
             <button class="login-btn" onclick="verificarPassword()">Ingresar</button>
             <div id="error-msg" class="error-msg">Contraseña incorrecta</div>
         </div>
     </div>
 
-    <!-- Panel de Control Principal (Oculto hasta poner contraseña) -->
+    <!-- Panel de Control Principal -->
     <div id="admin-content" class="container">
         <h1>Panel de Control</h1>
         
@@ -62,7 +62,7 @@
             <div class="form-group">
                 <label>Nombre de la Categoría:</label>
                 <input type="text" id="cat-nombre" placeholder="Ej: Bebidas">
-                <button class="save-btn" style="margin-top:10px;" onclick="guardarRegistro('categorias')">Agregar Categoría</button>
+                <button class="save-btn" onclick="guardarRegistro('categorias')">Agregar Categoría</button>
             </div>
             <table id="tabla-categorias">
                 <thead><tr><th>ID</th><th>Nombre</th></tr></thead>
@@ -74,14 +74,41 @@
         <div id="productos" class="section">
             <h2>Gestión de Productos</h2>
             <div class="form-group">
+                <label>ID de Categoría (Número):</label>
+                <input type="number" id="prod-categoria" placeholder="Ej: 1, 2 o 3">
+
                 <label>Nombre del Producto:</label>
-                <input type="text" id="prod-nombre" placeholder="Ej: Hamburguesa Completa">
-                <label style="margin-top:10px;">Precio:</label>
-                <input type="number" id="prod-precio" placeholder="Ej: 5000">
-                <button class="save-btn" style="margin-top:10px;" onclick="guardarRegistro('productos')">Agregar Producto</button>
+                <input type="text" id="prod-nombre" placeholder="Ej: Pizza Napolitana">
+
+                <label>Descripción:</label>
+                <textarea id="prod-descripcion" placeholder="Ej: Salsa, mozzarella, tomate en rodajas y ajos"></textarea>
+
+                <label>Precio ($):</label>
+                <input type="number" id="prod-precio" placeholder="Ej: 8500">
+
+                <label>¿Disponible?:</label>
+                <select id="prod-disponible">
+                    <option value="true">Sí (True)</option>
+                    <option value="false">No (False)</option>
+                </select>
+
+                <label>URL de la Imagen:</label>
+                <input type="text" id="prod-imagen" placeholder="https://...">
+
+                <button class="save-btn" onclick="guardarRegistro('productos')">Agregar Producto</button>
             </div>
             <table id="tabla-productos">
-                <thead><tr><th>ID</th><th>Nombre</th><th>Precio</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cat. ID</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Precio</th>
+                        <th>Disponible</th>
+                        <th>Imagen</th>
+                    </tr>
+                </thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -122,7 +149,6 @@
         }
     }
 
-    // Permitir presionar "Enter" para iniciar sesión
     document.getElementById('password-input').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') verificarPassword();
     });
@@ -137,17 +163,17 @@
 
     async function cargarDatos(tabla) {
         const tbody = document.querySelector(`#tabla-${tabla} tbody`);
-        tbody.innerHTML = '<tr><td colspan="4">Cargando datos...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7">Cargando datos...</td></tr>';
 
         const { data, error } = await _supabase.from(tabla).select('*');
         if (error) {
-            tbody.innerHTML = `<tr><td colspan="4">Error al cargar datos</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7">Error al cargar datos</td></tr>`;
             return;
         }
 
         tbody.innerHTML = '';
         if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4">No hay registros cargados.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7">No hay registros cargados.</td></tr>`;
             return;
         }
 
@@ -156,7 +182,15 @@
             if (tabla === 'categorias') {
                 tr.innerHTML = `<td>${row.id || ''}</td><td>${row.nombre || ''}</td>`;
             } else if (tabla === 'productos') {
-                tr.innerHTML = `<td>${row.id || ''}</td><td>${row.nombre || ''}</td><td>${row.precio || ''}</td>`;
+                tr.innerHTML = `
+                    <td>${row.id || ''}</td>
+                    <td>${row.categoria_id || ''}</td>
+                    <td>${row.nombre || ''}</td>
+                    <td>${row.descripcion || ''}</td>
+                    <td>$${row.precio || ''}</td>
+                    <td>${row.disponible ? 'Sí' : 'No'}</td>
+                    <td><a href="${row.imagen || '#'}" target="_blank">Ver link</a></td>
+                `;
             } else if (tabla === 'ajustes_menu') {
                 tr.innerHTML = `<td>${row.clave || row.id || ''}</td><td>${row.valor || row.descripcion || ''}</td>`;
             } else if (tabla === 'clientes') {
@@ -179,14 +213,34 @@
                 alert('Error al guardar: ' + error.message);
             }
         } else if (tabla === 'productos') {
+            let categoria_id = document.getElementById('prod-categoria').value;
             let nombre = document.getElementById('prod-nombre').value;
+            let descripcion = document.getElementById('prod-descripcion').value;
             let precio = document.getElementById('prod-precio').value;
-            if (!nombre || !precio) { alert('Completa todos los campos'); return; }
-            const { error } = await _supabase.from('productos').insert([{ nombre, precio: Number(precio) }]);
+            let disponible = document.getElementById('prod-disponible').value === 'true';
+            let imagen = document.getElementById('prod-imagen').value;
+
+            if (!nombre || !precio || !categoria_id) { 
+                alert('Por lo menos completa Categoría ID, Nombre y Precio'); 
+                return; 
+            }
+
+            const { error } = await _supabase.from('productos').insert([{ 
+                categoria_id: Number(categoria_id), 
+                nombre, 
+                descripcion, 
+                precio: Number(precio), 
+                disponible, 
+                imagen 
+            }]);
+
             if (!error) { 
                 alert('¡Producto guardado con éxito!'); 
+                document.getElementById('prod-categoria').value = '';
                 document.getElementById('prod-nombre').value = ''; 
+                document.getElementById('prod-descripcion').value = ''; 
                 document.getElementById('prod-precio').value = ''; 
+                document.getElementById('prod-imagen').value = ''; 
                 cargarDatos('productos'); 
             } else {
                 alert('Error al guardar: ' + error.message);
